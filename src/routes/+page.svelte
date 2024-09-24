@@ -264,43 +264,6 @@ function changeTheme(newTheme) {
   --button-hover-color: #0056b3;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: var(--background-color);
-}
-
-th, td {
-  border: 1px solid var(--border-color);
-  padding: 8px;
-}
-
-th {
-  background-color: var(--header-color);
-  color: var(--text-color);
-  cursor: pointer;
-}
-
-.contract-details {
-  padding: 10px;
-  background-color: var(--background-color);
-  border: 1px solid var(--border-color);
-  margin-bottom: 10px;
-}
-
-.total-row {
-  background-color: var(--header-color);
-  font-weight: bold;
-}
-
-button {
-  background-color: var(--button-color);
-  color: var(--text-color);
-}
-
-button:hover {
-  background-color: var(--button-hover-color);
-}
 
   /* Styles for form keypress submission */
   .contract-form input,
@@ -317,6 +280,16 @@ button:hover {
     0% { border-color: red; }
     100% { border-color: transparent; }
   }
+
+  :root {
+  --background-color: #f9f9f9;
+  --header-color: #f4f4f4;
+  --text-color: #000;
+  --border-color: #ccc;
+  --button-color: #007bff;
+  --button-hover-color: #0056b3;
+}
+
 </style>
 
 
@@ -362,7 +335,7 @@ button:hover {
         <td><input type="number" bind:value={contract.hours.friday} /></td>
         <td><input type="number" bind:value={contract.hours.saturday} /></td>
         <td>
-          <button on:click={() => toggleContractDetails(contract)}>Toggle Details</button> 
+          <button on:click={() => toggleContractDetails(contract)}>Details</button> 
           <span>Total: {getTotalHours(contract)} hrs</span> <!-- Weekly hours next to Toggle Details -->
         </td>
       </tr>
@@ -401,12 +374,12 @@ button:hover {
   
   {#if showForm}
     <div>
-      <h3>New Contract Details</h3>
+      <h3>New Contract</h3>
       <input type="text" placeholder="Contract Name" bind:value={newContract.name} class:error={errorFields.name} required on:keypress={handleKeyPress} />
       <input type="number" placeholder="Contract ID" bind:value={newContract.id} class:error={errorFields.id} required on:keypress={handleKeyPress} />
       <input type="number" placeholder="Rate (Optional)" bind:value={newContract.rate} on:keypress={handleKeyPress} />
       <input type="text" placeholder="Address (Optional)" bind:value={newContract.address} on:keypress={handleKeyPress} />
-      <textarea placeholder="Notes (Optional)" bind:value={newContract.notes} on:keypress={handleKeyPress}></textarea>
+      <input placeholder="Notes (Optional)" bind:value={newContract.notes} on:keypress={handleKeyPress}/>
       <button on:click={addContract}>Add Contract</button>
     </div>
   {/if} 
