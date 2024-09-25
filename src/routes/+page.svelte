@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import Chart from 'chart.js/auto';
+  import { Bar } from "svelte-chartjs";
   
   let contracts = [];
   let newContract = {
@@ -21,44 +22,10 @@
   let errorFields = {
     name: false,
     id: false
-  };
-  let theme = {
-  backgroundColor: '#f9f9f9',
-  headerColor: '#f4f4f4',
-  textColor: '#000',
-  borderColor: '#ccc',
-  buttonColor: '#007bff',
-  buttonHoverColor: '#0056b3',
-};
+    };
 
-let themes = [
-  {
-    name: "Default",
-    colors: {
-      backgroundColor: "#f9f9f9",
-      headerColor: "#f4f4f4",
-      textColor: "#000",
-      borderColor: "#ccc",
-      buttonColor: "#007bff",
-      buttonHoverColor: "#0056b3",
-    },
-  },
-  {
-    name: "Dark",
-    colors: {
-      backgroundColor: "#282c34",
-      headerColor: "#61dafb",
-      textColor: "#ffffff",
-      borderColor: "#61dafb",
-      buttonColor: "#61dafb",
-      buttonHoverColor: "#21a1f1",
-    },
-  },
-  // Add more themes as needed
-];
-
-let selectedTheme = themes[0]; // Default to the first theme
-
+    
+  let activeTab = 0;
 
   // Function to add a new contract
   function addContract() {
@@ -168,44 +135,67 @@ let selectedTheme = themes[0]; // Default to the first theme
       link.click();
     }
   
-    // Function to display chart (you can customize this part)
-    function renderChart() {
-      const ctx = document.getElementById('myChart').getContext('2d');
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-          datasets: contracts.map(contract => ({
-            label: contract.name,
-            data: Object.values(contract.hours),
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1
-          }))
-        },
-        options: {
-          scales: {
-            y: { beginAtZero: true }
-          }
-        }
-      });
+  function switchTab(index) {
+    activeTab = index;
+  }
+
+/*
+   _____  _    _            _____  _______  _____ 
+  / ____|| |  | |    /\    |  __ \|__   __|/ ____|
+ | |     | |__| |   /  \   | |__) |  | |  | (___  
+ | |     |  __  |  / /\ \  |  _  /   | |   \___ \ 
+ | |____ | |  | | / ____ \ | | \ \   | |   ____) |
+  \_____||_|  |_|/_/    \_\|_|  \_\  |_|  |_____/
+*/
+
+
+
+let selectedTabs = [];
+
+// Chart options
+const options = {
+  responsive: true,
+  scales: {
+    y: {
+      beginAtZero: true
     }
-  // Function to change the theme
-function changeTheme(newTheme) {
-  theme = { ...theme, ...newTheme };
-  
-  // Update CSS variables
-  document.documentElement.style.setProperty('--background-color', theme.backgroundColor);
-  document.documentElement.style.setProperty('--header-color', theme.headerColor);
-  document.documentElement.style.setProperty('--text-color', theme.textColor);
-  document.documentElement.style.setProperty('--border-color', theme.borderColor);
-  document.documentElement.style.setProperty('--button-color', theme.buttonColor);
-  document.documentElement.style.setProperty('--button-hover-color', theme.buttonHoverColor);
+  }
+};
+
+// Function to toggle tab selection
+function toggleTab(index) {
+  if (selectedTabs.includes(index)) {
+    selectedTabs = selectedTabs.filter(i => i !== index);
+  } else {
+    selectedTabs = [...selectedTabs, index];
+  }
 }
-    onMount(() => {
-      changeTheme(theme)
-      renderChart();
-    });
+
+// Function to convert multiple contracts' hours into chart data
+function generateChartData(contracts) {
+  if (!contracts.length) return {}; // If no contracts selected, return empty
+
+  // Colors for each dataset
+  const colors = [
+    "rgba(75,192,192,0.4)",
+    "rgba(255,99,132,0.4)",
+    "rgba(54,162,235,0.4)",
+    "rgba(255,206,86,0.4)"
+  ];
+
+  return {
+    labels: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    datasets: contracts.map((contract, i) => ({
+      label: `${contract.name} Hours`,
+      backgroundColor: colors[i % colors.length],
+      borderColor: colors[i % colors.length].replace("0.4", "1"),
+      borderWidth: 1,
+      data: Object.values(contract.hours)
+    }))
+  };
+}  
+
+
   </script>
  
  
@@ -217,95 +207,101 @@ function changeTheme(newTheme) {
  | |____   ____) | ____) |
   \_____| |_____/ |_____/ 
 -->
-  <style>
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-    }
-    th {
-      background-color: #f4f4f4;
-      cursor: pointer;
-    }
-    th .sort-arrow {
-      margin-left: 5px;
-      font-size: 0.8em;
-    }
-    .center-buttons {
-      text-align: center;
-      margin: 20px;
-    }
-    .contract-details {
-      padding: 10px;
-      background-color: #f9f9f9;
-      border: 1px solid #ddd;
-      margin-bottom: 10px;
-    }
-    .total-row {
-      background-color: #f0f0f0;
-      font-weight: bold;
-    }
-    .contract-details {
-    margin-top: 20px;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
+<style>
+  :root {
+    /* Default theme */
+    --border-color: #1eff00;
+    --background-light: #f4f4f4;
+    --background-dark: #f9f9f9;
+    --text-color: #333;
+    --highlight-color: #f0f0f0;
+    --error-color: red;
   }
 
-  :root {
-  --background-color: #f9f9f9;
-  --header-color: #f4f4f4;
-  --text-color: #000;
-  --border-color: #ccc;
-  --button-color: #007bff;
-  --button-hover-color: #0056b3;
-}
+  /* Make font size scale with viewport width */
+  body {
+    font-size: 1.5vw; /* Adjusts font size based on viewport width */
+  }
 
+  /* Table styles */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
 
-  /* Styles for form keypress submission */
+  th, td {
+    border: 1px solid var(--border-color);
+    padding: 1vw; /* Padding scales with viewport width */
+  }
+
+  th {
+    background-color: var(--background-light);
+    cursor: pointer;
+  }
+
+  th .sort-arrow {
+    margin-left: 0.5vw;
+    font-size: 0.8em; /* Keep font size for the sort arrow relative */
+  }
+
+  .center-buttons {
+    text-align: center;
+    margin: 2vw; /* Margin scales with viewport width */
+  }
+
+  .contract-details {
+    padding: 1vw;
+    background-color: var(--background-dark);
+    border: 1px solid var(--highlight-color);
+    margin-bottom: 1vw;
+  }
+
+  .total-row {
+    background-color: var(--highlight-color);
+    font-weight: bold;
+  }
+
+  /* Form styles */
   .contract-form input,
   .contract-form textarea {
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 1vw;
+    font-size: 1.5vw; /* Scales with viewport width */
+    padding: 1vw;
+    width: 100%; /* Make sure the input fields stretch across */
+    box-sizing: border-box; /* Ensures padding doesn’t break the width */
   }
+
   .error {
-    border: 2px solid red;
+    border: 0.2vw solid var(--error-color); /* Scale border thickness */
     animation: flash 0.5s linear infinite alternate;
   }
 
   @keyframes flash {
-    0% { border-color: red; }
+    0% { border-color: var(--error-color); }
     100% { border-color: transparent; }
   }
+  .tabs button {
+    padding: 10px;
+    margin-right: 10px;
+    cursor: pointer;
+  }
 
-  :root {
-  --background-color: #f9f9f9;
-  --header-color: #f4f4f4;
-  --text-color: #000;
-  --border-color: #ccc;
-  --button-color: #007bff;
-  --button-hover-color: #0056b3;
-}
+  .tabs .active {
+    font-weight: bold;
+  }
 
+  .chart {
+    margin-top: 20px;
+    width: 100%;
+    height: 400px;
+  }
 </style>
 
 
 
 
 
-
-
-<div>
-  <label for="themeSelector">Select Theme:</label>
-  <select id="themeSelector" bind:value={selectedTheme} on:change="{() => changeTheme(selectedTheme.colors)}">
-    {#each themes as theme}
-      <option>{theme.name}</option>
-    {/each}
-  </select>
-</div>  
 
 <h1>Contract Hours Tracker</h1>
   
@@ -384,5 +380,24 @@ function changeTheme(newTheme) {
     </div>
   {/if} 
   
-  <h2>Graphs</h2>
-  <canvas id="myChart" width="400" height="200"></canvas>
+
+<!-- Tab Navigation -->
+<div class="tabs">
+  {#each contracts as contract, index}
+    <button
+      class="{selectedTabs.includes(index) ? 'active' : ''}"
+      on:click={() => toggleTab(index)}
+    >
+      {contract.name}
+    </button>
+  {/each}
+</div>
+
+<!-- Chart Display -->
+<div class="chart">
+  {#if selectedTabs.length > 0}
+    <Bar {options} data={generateChartData(selectedTabs.map(index => contracts[index]))} />
+  {:else}
+    <p>Select a contract to view the chart</p>
+  {/if}
+</div>
