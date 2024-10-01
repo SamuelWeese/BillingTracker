@@ -16,7 +16,38 @@
   let showForm = false;
   let expandedContract = null;
   let sortDirection = { field: null, asc: true };
-  
+
+  let currentDateTime = new Date();
+  let name = "John Doe";
+  let daysSinceBeginning = 30;
+  let daysActive = 20;
+  let showModal = false;
+
+  // Update the current date and time every second
+  onMount(() => {
+    const interval = setInterval(() => {
+      currentDateTime = new Date();
+    }, 1000);
+
+    return () => clearInterval(interval); // Clean up interval on component destruction
+  });
+
+  function openModal() {
+    showModal = true;
+  }
+
+  function closeModal() {
+    showModal = false;
+  }
+
+  function updateUserDetails(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    name = formData.get('name');
+    daysSinceBeginning = parseInt(formData.get('daysSinceBeginning'), 10);
+    daysActive = parseInt(formData.get('daysActive'), 10);
+    closeModal();
+  }
 
   // Array to track required field errors
   let errorFields = {
@@ -99,6 +130,36 @@
         contracts.sort((a, b) => sortDirection.asc ? a.hours[field] - b.hours[field] : b.hours[field] - a.hours[field]);
       }
     }
+
+  // Current Date Logic
+
+  // Get current date and week
+  let currentWeek = [];
+  let todayIndex;
+
+  function getCurrentWeek() {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 (Sunday) to 6 (Saturday)
+
+    // Set the start of the week to the last Sunday
+    let startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - dayOfWeek);
+
+    // Populate the week array with dates for each day
+    currentWeek = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      currentWeek.push(day);
+    }
+
+    todayIndex = dayOfWeek; // Store index of today for highlighting
+  }
+
+
+  onMount(() => {
+    getCurrentWeek();
+  });
   
     // Function to get sort arrow for a column
     function getSortArrow(field) {
@@ -219,6 +280,7 @@ function generateChartData(contracts) {
     --border-color: #1a284b; /* Dark blue */
     --background-light: #f7e1a0; /* Tan/yellow */
     --background-dark: #192b45; /* Deep dark blue */
+    --highlighted-dark-background: #2e4a6f;
     --text-color: #f0d290; /* Light yellowish tan */
     --input-background: #fff4d2;
     --highlight-color: #ecc678; /* Soft yellow for highlights */
@@ -257,6 +319,10 @@ function generateChartData(contracts) {
     border-collapse: collapse;
     background-color: var(--background-light);
     color: var(--text-color);
+  }
+
+.selected {
+    background-color: var(--highlighted-dark-background) /* Highlight color for the current day */
   }
 
   th, td {
@@ -538,79 +604,180 @@ button:active {
 .contract-name {
   color: var(--background-dark);
 }
+
+.user-info-box {
+  background-color: var(--highlighted-dark-background);
+  color: var(--text-color);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem auto;
+  width: fit-content;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.user-info-box p {
+  margin: 0.5rem 0;
+}
+
+.user-info-box {
+    background-color: var(--highlighted-dark-background);
+    color: var(--text-color);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem auto;
+    width: 50%;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .user-info-box p {
+    margin: 0.5rem 0;
+  }
+
+  .update-button {
+    margin: 1rem auto; 
+    margin-top: 0%;
+    margin-bottom: 0%;
+    background-color: var(--highlight-color);
+    border: none;
+    color: var(--background-dark);
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    text-align: center;
+    display: block;
+  }
+  .update-button:hover {
+    background-color: var(--text-color);
+  }
+
+  .modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--background-dark);
+    padding: 2rem;
+    border: 2px solid var(--background-light);
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+
+  .modal button {
+    margin-top: 1rem;
+  }
+
 </style>
 
 
 <html>
+
 <head>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap" rel="stylesheet"></head>
 <header>
   <h1>Dialed in Hour Tracker</h1>
+
 </header>
 <body>
 
+<div class="user-info-box">
+  <p><strong>Name:</strong> {name}</p>
+  <p><strong>Current Date/Time:</strong> {currentDateTime.toLocaleString()}</p>
+  <p><strong>Days Since Beginning:</strong> {daysSinceBeginning} days</p>
+  <p><strong>Days Active:</strong> {daysActive} days</p>
+  <button class="update-button" on:click={openModal}>Update User Details</button>
+</div>
 
-
-  
+{#if showModal}
+  <div class="modal-backdrop" on:click={closeModal}></div>
+  <div class="modal">
+    <h3>Update User Details</h3>
+    <form on:submit={updateUserDetails}>
+      <label>
+        Name:
+        <input type="text" name="name" value={name} required />
+      </label>
+      <label>
+        Days Since Beginning:
+        <input type="number" name="daysSinceBeginning" value={daysSinceBeginning} min="0" required />
+      </label>
+      <label>
+        Days Active:
+        <input type="number" name="daysActive" value={daysActive} min="0" required />
+      </label>
+      <button type="submit">Update</button>
+      <button type="button" on:click={closeModal}>Cancel</button>
+    </form>
+  </div>
+{/if}
   <table>
     <thead>
       <tr>
         <th on:click={() => sortContractsBy('name')}>Contract <span class="sort-arrow">{getSortArrow('name')}</span></th>
-        <th on:click={() => sortContractsBy('sunday')}>Sunday <span class="sort-arrow">{getSortArrow('sunday')}</span></th>
-        <th on:click={() => sortContractsBy('monday')}>Monday <span class="sort-arrow">{getSortArrow('monday')}</span></th>
-        <th on:click={() => sortContractsBy('tuesday')}>Tuesday <span class="sort-arrow">{getSortArrow('tuesday')}</span></th>
-        <th on:click={() => sortContractsBy('wednesday')}>Wednesday <span class="sort-arrow">{getSortArrow('wednesday')}</span></th>
-        <th on:click={() => sortContractsBy('thursday')}>Thursday <span class="sort-arrow">{getSortArrow('thursday')}</span></th>
-        <th on:click={() => sortContractsBy('friday')}>Friday <span class="sort-arrow">{getSortArrow('friday')}</span></th>
-        <th on:click={() => sortContractsBy('saturday')}>Saturday <span class="sort-arrow">{getSortArrow('saturday')}</span></th>
+        {#each currentWeek as day, index}
+          <th 
+            on:click={() => sortContractsBy(day.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase())} 
+            class:selected={index === todayIndex}
+          >
+            {day.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric' })} 
+            <span class="sort-arrow">{getSortArrow(day.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase())}</span>
+          </th>
+        {/each}
         <th>Details</th>
       </tr>
     </thead>
     <tbody>
       {#each contracts as contract}
-      <tr>
-        <td class="contract-name">{contract.name}</td>
-        <td><input type="number" bind:value={contract.hours.sunday} /></td>
-        <td><input type="number" bind:value={contract.hours.monday} /></td>
-        <td><input type="number" bind:value={contract.hours.tuesday} /></td>
-        <td><input type="number" bind:value={contract.hours.wednesday} /></td>
-        <td><input type="number" bind:value={contract.hours.thursday} /></td>
-        <td><input type="number" bind:value={contract.hours.friday} /></td>
-        <td><input type="number" bind:value={contract.hours.saturday} /></td>
-        <td>
-          <div>
-            <button on:click={() => toggleContractDetails(contract)}>Details</button>
-          </div>
-          <div class="total-hours">
-            <span>{getTotalHours(contract)} hrs</span> <!-- Weekly hours next to Toggle Details -->
-          </div>
-        </td>
-      </tr>
-      {#if expandedContract === contract}
-      <tr>
-        <td colspan="9">
-          <div class="contract-details">
-            <p><strong>ID:</strong> {contract.id}</p>
-            <p><strong>Rate:</strong> {contract.rate}</p>
-            <p><strong>Address:</strong> {contract.address}</p>
-            <p><strong>Notes:</strong> {contract.notes}</p>
-            <button on:click={() => exportContractToCSV(contract)}>Export Contract to CSV</button>
-          </div>
-        </td>
-      </tr>
-      {/if}
+        <tr>
+          <td class="contract-name">{contract.name}</td>
+          {#each currentWeek as day, index}
+            <td class:selected={index === todayIndex}>
+              <input type="number" bind:value={contract.hours[day.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()]} />
+            </td>
+          {/each}
+          <td>
+            <div>
+              <button on:click={() => toggleContractDetails(contract)}>Details</button>
+            </div>
+            <div class="total-hours">
+              <span>{getTotalHours(contract)} hrs</span>
+            </div>
+          </td>
+        </tr>
+        {#if expandedContract === contract}
+          <tr>
+            <td colspan="9">
+              <div class="contract-details">
+                <p><strong>ID:</strong> {contract.id}</p>
+                <p><strong>Rate:</strong> {contract.rate}</p>
+                <p><strong>Address:</strong> {contract.address}</p>
+                <p><strong>Notes:</strong> {contract.notes}</p>
+                <button on:click={() => exportContractToCSV(contract)}>Export Contract to CSV</button>
+              </div>
+            </td>
+          </tr>
+        {/if}
       {/each}
       <tr class="total-row">
         <td>Total</td>
-        <td>{getTotalHoursPerDay('sunday')}</td>
-        <td>{getTotalHoursPerDay('monday')}</td>
-        <td>{getTotalHoursPerDay('tuesday')}</td>
-        <td>{getTotalHoursPerDay('wednesday')}</td>
-        <td>{getTotalHoursPerDay('thursday')}</td>
-        <td>{getTotalHoursPerDay('friday')}</td>
-        <td>{getTotalHoursPerDay('saturday')}</td>
+        {#each currentWeek as day}
+          <td>{getTotalHoursPerDay(day.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase())}</td>
+        {/each}
         <td></td>
       </tr>
     </tbody>
