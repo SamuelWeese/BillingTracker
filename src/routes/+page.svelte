@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import Chart from 'chart.js/auto';
   import { Bar } from "svelte-chartjs";
-  
+
   let contracts = [];
   let newContract = {
     name: "",
@@ -49,6 +49,39 @@
     closeModal();
   }
 
+  let showColorModal = false;
+
+  // Default theme values
+  let borderColor = '#1a284b';
+  let backgroundLight = '#f7e1a0';
+  let backgroundDark = '#192b45';
+  let highlightedDarkBackground = '#2e4a6f';
+  let textColor = '#f0d290';
+  let inputBackground = '#fff4d2';
+  let highlightColor = '#ecc678';
+  let errorColor = '#e74c3c';
+
+  // Function to apply changes to CSS variables
+  function applyColorChanges() {
+    document.documentElement.style.setProperty('--border-color', borderColor);
+    document.documentElement.style.setProperty('--background-light', backgroundLight);
+    document.documentElement.style.setProperty('--background-dark', backgroundDark);
+    document.documentElement.style.setProperty('--highlighted-dark-background', highlightedDarkBackground);
+    document.documentElement.style.setProperty('--text-color', textColor);
+    document.documentElement.style.setProperty('--input-background', inputBackground);
+    document.documentElement.style.setProperty('--highlight-color', highlightColor);
+    document.documentElement.style.setProperty('--error-color', errorColor);
+    closeColorModal();
+  }
+
+  function openColorModal() {
+    showColorModal = true;
+  }
+
+  function closeColorModal() {
+    showColorModal = false;
+  }
+
   // Array to track required field errors
   let errorFields = {
     name: false,
@@ -57,7 +90,7 @@
 
     
   let activeTab = 0;
-
+  let contractIDs = [];
   // Function to add a new contract
   function addContract() {
     // Reset error states
@@ -67,11 +100,12 @@
     };
 
     // Check if required fields are filled out
-    if (!newContract.name || newContract.id === null) {
+    if (!newContract.name || newContract.id === null || contractIDs.includes(newContract.id)) {
       return; // Exit the function if there are errors
     }
 
-    contracts = [...contracts, { ...newContract, id: Date.now() }];
+    contracts = [...contracts, { ...newContract, id: newContract.id }];
+    contractIDs.push(newContract.id);
     showForm = false;
     resetForm();
   }
@@ -286,7 +320,8 @@ function generateChartData(contracts) {
     --highlight-color: #ecc678; /* Soft yellow for highlights */
     --error-color: #e74c3c; /* Red for errors */
     --size-header: 180px;
-    --chart-background: rgba(247, 225, 160, 0.6)
+    --chart-background: rgba(247, 225, 160, 0.6);
+    --button-container-size: 60px;
   }
   
   html {
@@ -631,14 +666,29 @@ button:active {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
 
-  .user-info-box p {
-    margin: 0.5rem 0;
+
+  .user-info-box {
+    position: relative;
+    border: 1px solid #ccc; /* Optional styling */
+    padding: 1rem;
+  }
+  .user-info-text {
+    margin-bottom: var(--button-container-size);
   }
 
-  .update-button {
-    margin: 1rem auto; 
-    margin-top: 0%;
-    margin-bottom: 0%;
+  .button-container {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 2rem; 
+    height: var(--button-container-size);
+    margin: -4px;
+  }
+
+  .update-button, .theme-button {
+    margin: 0; 
     background-color: var(--highlight-color);
     border: none;
     color: var(--background-dark);
@@ -647,12 +697,12 @@ button:active {
     border-radius: 8px;
     transition: all 0.3s ease;
     text-align: center;
-    display: block;
-  }
-  .update-button:hover {
-    background-color: var(--text-color);
+    padding: 0.5rem 1rem;
   }
 
+  .update-button:hover, .theme-button:hover {
+    background-color: var(--text-color);
+  } 
   .modal {
     position: fixed;
     top: 50%;
@@ -695,36 +745,60 @@ button:active {
 </header>
 <body>
 
-<div class="user-info-box">
-  <p><strong>Name:</strong> {name}</p>
-  <p><strong>Current Date/Time:</strong> {currentDateTime.toLocaleString()}</p>
-  <p><strong>Days Since Beginning:</strong> {daysSinceBeginning} days</p>
-  <p><strong>Days Active:</strong> {daysActive} days</p>
-  <button class="update-button" on:click={openModal}>Update User Details</button>
-</div>
-
-{#if showModal}
-  <div class="modal-backdrop" on:click={closeModal}></div>
-  <div class="modal">
-    <h3>Update User Details</h3>
-    <form on:submit={updateUserDetails}>
-      <label>
-        Name:
-        <input type="text" name="name" value={name} required />
-      </label>
-      <label>
-        Days Since Beginning:
-        <input type="number" name="daysSinceBeginning" value={daysSinceBeginning} min="0" required />
-      </label>
-      <label>
-        Days Active:
-        <input type="number" name="daysActive" value={daysActive} min="0" required />
-      </label>
-      <button type="submit">Update</button>
-      <button type="button" on:click={closeModal}>Cancel</button>
-    </form>
+  <div class="user-info-box">
+    <div class="user-info-text">
+      <p><strong>Name:</strong> {name}</p>
+      <p><strong>Current Date/Time:</strong> {currentDateTime.toLocaleString()}</p>
+      <p><strong>Days Since Beginning:</strong> {daysSinceBeginning} days</p>
+      <p><strong>Days Active:</strong> {daysActive} days</p>
+    </div>
+    <div class="button-container">
+      <button class="update-button" on:click={openModal}>Update User Details</button>
+      <button class="theme-button" on:click={openColorModal}>Change Theme</button>
+    </div>
   </div>
-{/if}
+
+  {#if showColorModal}
+    <div class="modal">
+      <div class="modal-content">
+        <h2>Update Theme Colors</h2>
+        <label>Border Color: <input type="color" bind:value={borderColor} /></label>
+        <label>Background Light: <input type="color" bind:value={backgroundLight} /></label>
+        <label>Background Dark: <input type="color" bind:value={backgroundDark} /></label>
+        <label>Highlighted Dark Background: <input type="color" bind:value={highlightedDarkBackground} /></label>
+        <label>Text Color: <input type="color" bind:value={textColor} /></label>
+        <label>Input Background: <input type="color" bind:value={inputBackground} /></label>
+        <label>Highlight Color: <input type="color" bind:value={highlightColor} /></label>
+        <label>Error Color: <input type="color" bind:value={errorColor} /></label>
+
+        <button on:click={applyColorChanges}>Apply Changes</button>
+        <button on:click={closeColorModal}>Close</button>
+      </div>
+    </div>
+  {/if}
+
+  {#if showModal}
+    <div class="modal-backdrop" on:click={closeModal}></div>
+    <div class="modal">
+      <h3>Update User Details</h3>
+      <form on:submit={updateUserDetails}>
+        <label>
+          Name:
+          <input type="text" name="name" value={name} required />
+        </label>
+        <label>
+          Days Since Beginning:
+          <input type="number" name="daysSinceBeginning" value={daysSinceBeginning} min="0" required />
+        </label>
+        <label>
+          Days Active:
+          <input type="number" name="daysActive" value={daysActive} min="0" required />
+        </label>
+        <button type="submit">Update</button>
+        <button type="button" on:click={closeModal}>Cancel</button>
+      </form>
+    </div>
+  {/if}
   <table>
     <thead>
       <tr>
