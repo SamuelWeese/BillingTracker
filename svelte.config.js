@@ -5,7 +5,7 @@ export default {
 	kit: {
 		adapter: adapter(),
         paths: {
-            base: process.env.NODE_ENV === 'production' ? 'https://SamuelWeese.github.io/BillingTracker' : '';
+            base: process.env.NODE_ENV === 'production' ? 'https://SamuelWeese.github.io/BillingTracker' : '',
         }
 	}
 };
