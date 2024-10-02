@@ -174,7 +174,7 @@ const options = {
 		<div class="error">
 			<span class="status">` + status + '</span>\n			<div class="message">\n				<h1>' + message + "</h1>\n			</div>\n		</div>\n	</body>\n</html>\n"
   },
-  version_hash: "8sgkex"
+  version_hash: "6gl2yb"
 };
 async function get_hooks() {
   return {};
@@ -287,6 +287,13 @@ function enumerable_symbols(object) {
 	);
 }
 
+const is_identifier = /^[a-zA-Z_$][a-zA-Z_$0-9]*$/;
+
+/** @param {string} key */
+function stringify_key(key) {
+	return is_identifier.test(key) ? '.' + key : '[' + JSON.stringify(key) + ']';
+}
+
 const chars$1 = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$';
 const unsafe_chars = /[<\b\f\n\r\t\0\u2028\u2029]/g;
 const reserved =
@@ -360,6 +367,22 @@ function uneval(value, replacer) {
 						keys.pop();
 					}
 					break;
+				
+				case "Int8Array":
+				case "Uint8Array":
+				case "Uint8ClampedArray":
+				case "Int16Array":
+				case "Uint16Array":
+				case "Int32Array":
+				case "Uint32Array":
+				case "Float32Array":
+				case "Float64Array":
+				case "BigInt64Array":
+				case "BigUint64Array":
+					return;
+				
+				case "ArrayBuffer":
+					return;
 
 				default:
 					if (!is_plain_object(thing)) {
@@ -377,7 +400,7 @@ function uneval(value, replacer) {
 					}
 
 					for (const key in thing) {
-						keys.push(`.${key}`);
+						keys.push(stringify_key(key));
 						walk(thing[key]);
 						keys.pop();
 					}
@@ -439,6 +462,27 @@ function uneval(value, replacer) {
 			case 'Set':
 			case 'Map':
 				return `new ${type}([${Array.from(thing).map(stringify).join(',')}])`;
+			
+			case "Int8Array":
+			case "Uint8Array":
+			case "Uint8ClampedArray":
+			case "Int16Array":
+			case "Uint16Array":
+			case "Int32Array":
+			case "Uint32Array":
+			case "Float32Array":
+			case "Float64Array":
+			case "BigInt64Array":
+			case "BigUint64Array": {
+				/** @type {import("./types.js").TypedArray} */
+				const typedArray = thing;
+				return `new ${type}([${typedArray.toString()}])`;
+			}
+				
+			case "ArrayBuffer": {
+				const ui8 = new Uint8Array(thing);
+				return `new Uint8Array([${ui8.toString()}]).buffer`;
+			}
 
 			default:
 				const obj = `{${Object.keys(thing)
@@ -591,6 +635,60 @@ function stringify_primitive$1(thing) {
 	return str;
 }
 
+/**
+ * Base64 Encodes an arraybuffer
+ * @param {ArrayBuffer} arraybuffer
+ * @returns {string}
+ */
+function encode64(arraybuffer) {
+  const dv = new DataView(arraybuffer);
+  let binaryString = "";
+
+  for (let i = 0; i < arraybuffer.byteLength; i++) {
+    binaryString += String.fromCharCode(dv.getUint8(i));
+  }
+
+  return binaryToAscii(binaryString);
+}
+
+const KEY_STRING =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/**
+ * Substitute for btoa since it's deprecated in node.
+ * Does not do any input validation.
+ *
+ * @see https://github.com/jsdom/abab/blob/master/lib/btoa.js
+ *
+ * @param {string} str
+ * @returns {string}
+ */
+function binaryToAscii(str) {
+  let out = "";
+  for (let i = 0; i < str.length; i += 3) {
+    /** @type {[number, number, number, number]} */
+    const groupsOfSix = [undefined, undefined, undefined, undefined];
+    groupsOfSix[0] = str.charCodeAt(i) >> 2;
+    groupsOfSix[1] = (str.charCodeAt(i) & 0x03) << 4;
+    if (str.length > i + 1) {
+      groupsOfSix[1] |= str.charCodeAt(i + 1) >> 4;
+      groupsOfSix[2] = (str.charCodeAt(i + 1) & 0x0f) << 2;
+    }
+    if (str.length > i + 2) {
+      groupsOfSix[2] |= str.charCodeAt(i + 2) >> 6;
+      groupsOfSix[3] = str.charCodeAt(i + 2) & 0x3f;
+    }
+    for (let j = 0; j < groupsOfSix.length; j++) {
+      if (typeof groupsOfSix[j] === "undefined") {
+        out += "=";
+      } else {
+        out += KEY_STRING[groupsOfSix[j]];
+      }
+    }
+  }
+  return out;
+}
+
 const UNDEFINED = -1;
 const HOLE = -2;
 const NAN = -3;
@@ -612,8 +710,10 @@ function stringify(value, reducers) {
 
 	/** @type {Array<{ key: string, fn: (value: any) => any }>} */
 	const custom = [];
-	for (const key in reducers) {
-		custom.push({ key, fn: reducers[key] });
+	if (reducers) {
+		for (const key of Object.getOwnPropertyNames(reducers)) {
+			custom.push({ key, fn: reducers[key] });
+		}
 	}
 
 	/** @type {string[]} */
@@ -719,6 +819,33 @@ function stringify(value, reducers) {
 					str += ']';
 					break;
 
+				case "Int8Array":
+				case "Uint8Array":
+				case "Uint8ClampedArray":
+				case "Int16Array":
+				case "Uint16Array":
+				case "Int32Array":
+				case "Uint32Array":
+				case "Float32Array":
+				case "Float64Array":
+				case "BigInt64Array":
+				case "BigUint64Array": {
+					/** @type {import("./types.js").TypedArray} */
+					const typedArray = thing;
+					const base64 = encode64(typedArray.buffer);
+					str = '["' + type + '","' + base64 + '"]';
+					break;
+				}
+					
+				case "ArrayBuffer": {
+					/** @type {ArrayBuffer} */
+					const arraybuffer = thing;
+					const base64 = encode64(arraybuffer);
+					
+					str = `["ArrayBuffer","${base64}"]`;
+					break;
+				}
+				
 				default:
 					if (!is_plain_object(thing)) {
 						throw new DevalueError(
@@ -737,7 +864,7 @@ function stringify(value, reducers) {
 					if (Object.getPrototypeOf(thing) === null) {
 						str = '["null"';
 						for (const key in thing) {
-							keys.push(`.${key}`);
+							keys.push(stringify_key(key));
 							str += `,${stringify_string(key)},${flatten(thing[key])}`;
 							keys.pop();
 						}
@@ -748,7 +875,7 @@ function stringify(value, reducers) {
 						for (const key in thing) {
 							if (started) str += ',';
 							started = true;
-							keys.push(`.${key}`);
+							keys.push(stringify_key(key));
 							str += `${stringify_string(key)}:${flatten(thing[key])}`;
 							keys.pop();
 						}
